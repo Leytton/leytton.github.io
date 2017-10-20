@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>A*寻路算法</title>
+	</head>
+	<body>
+		<div>
+			<button id="btn_start" onclick="startFinding();">开始寻路</button>
+			<span>(点击地图设置障碍)</span>
+		</div>
+		<div id="map"></div>
+	</body>
+</html>
+<style>
+	div{
+	    position: relative;
+	    margin: 10px auto;
+	    width: 800px;
+	}
+    #map span{
+        position: absolute;
+        width: 40px;
+        height: 40px;
+        padding: 1px;
+        background-color: gray;
+        border: 1px dashed #cccccc;
+    }
+    body{
+        background: black;
+        color: wheat;
+    }
+</style>
+    
+<script>
+	
+	function Point(){
+       this.x=0;
+       this.y=0;
+       this.F=0;
+       this.G=0;//G值 开始点 到当前点的移动量
+       this.H=0;//H值　当前点移动目的地的移动量估算值
+       this.father=null;
+       this.is_start=0;
+       this.is_end=0;
+       this.is_wall=0;
+       this.is_road=1;
+       this.is_close=0;
+    };
+    
+	map = [];
+	openList=[];
+    
+    var start_x=8;
+    var start_y=5;
+    var end_x=8;
+    var end_y=15;
+    var now_x=start_x;
+    var now_y=start_y;
+    var is_found=false;
+	
+    init();
+    	
+    function startFinding(){
+    	pushToCloseList(map[start_x][start_y]);
+    	addNearPointsToOpenList(map[start_x][start_y]);
+    	repeatFinding();
+    }
+    
+    function repeatFinding(){
+    	var minFPoint_index = getNearestPonitIndexInOpenList();
+		if(minFPoint_index==-1){
+			console.log("无法找到！");
+			return;
+		}
+    	var minFPoint=openList[minFPoint_index];
+//  	console.log(minFPoint);
+    	openList.splice(minFPoint_index,1);
+    	
+    	pushToCloseList(minFPoint);
+		addNearPointsToOpenList(minFPoint);
+		
+		setTimeout(function(){
+			if(!is_found){
+				repeatFinding();
+			}
+		},100);
+    }
+    
+    function addNearPointsToOpenList(point){
+    	var x=point.x;
+    	var y=point.y;
+//  	pushToOpenList(map[x][y],x-1,y-1);
+    	pushToOpenList(map[x][y],x,y-1);
+//  	pushToOpenList(map[x][y],x+1,y-1);
+    	
+    	pushToOpenList(map[x][y],x-1,y);
+    	pushToOpenList(map[x][y],x+1,y);
+    	
+//  	pushToOpenList(map[x][y],x-1,y+1);
+    	pushToOpenList(map[x][y],x,y+1);
+//  	pushToOpenList(map[x][y],x+1,y+1);
+    }
+    
+    function getNearestPonitIndexInOpenList(){
+    	var length = openList.length;
+    	if(length==0){
+			return -1;
+		}
+    	var minFPoint_index=0;
+    	for(var i=1;i<length;i++){
+    		if(openList[i].F<openList[minFPoint_index].F){
+    			minFPoint_index=i;
+    		}
+    	}
+    	return minFPoint_index;
+    }
+    
+    
+    function pushToOpenList(fatherPoint,x,y){
+		if(x==end_x&&y==end_y){
+    		console.log("找到路径了");
+    		is_found=true;
+    		
+    		document.getElementById("btn_start").disabled=true;
+    		do{
+    			console.log("("+fatherPoint.x+","+fatherPoint.y+")");
+    			document.getElementById(fatherPoint.x+"-"+fatherPoint.y).style.background="pink";
+    			fatherPoint=fatherPoint.father;
+    		}while(fatherPoint&&fatherPoint.is_close);
+    	}
+    	if(x>=0&&x<20&&y>=0&&y<20 && !map[x][y].is_close && map[x][y].is_road){//如果T在closed列表中：不管它。
+    		if(!IsInOpenList(x,y)){//如果T不在open列表中：添加它然后计算出它的和值。
+    			map[x][y].father=fatherPoint;
+	    		map[x][y].G=getG(fatherPoint,map[x][y]);
+	    		map[x][y].H=getH(map[x][y]);
+	    		map[x][y].F=map[x][y].G+map[x][y].H;
+	    		openList.push(map[x][y]);
+	    		document.getElementById(x+"-"+y).style.background="rgb(152, 251, 152)";
+    		}else{//如果T已经在open列表中：当我们使用当前生成的路径到达那里时，检查F 和值是否更小。如果是，更新它的和值和它的前继。
+    			var G=getG(fatherPoint,map[x][y]);
+    			if(G<map[x][y].G){
+    				map[x][y].father=fatherPoint;
+    				map[x][y].G=G;
+		    		map[x][y].F=G+map[x][y].H;
+    			}
+    		}
+    	}
+    }
+    function IsInOpenList(x,y){
+    	for(var i=0;i<this.openList.length;i++){
+            if(this.openList[i].x==x&&this.openList[i].y==y){
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    function pushToCloseList(point){
+    	if(point.is_road&&!point.is_close){
+    		point.is_close=1;
+    		document.getElementById(point.x+"-"+point.y).style.background="rgb(175, 238, 238)";
+    	}
+    }
+    
+    function getG(father,point){
+       if(father==null){
+           return 0;
+       }
+       return father.G+Math.abs(point.x-father.x)+Math.abs(point.y-father.y);
+    }
+    
+    function getH(point){
+    	return Math.abs(point.x-end_x)+Math.abs(point.y-end_y);
+    }
+    
+	
+	function init(){
+		
+		//初始化地图
+		var map_dom = document.getElementById("map");
+		for (var x=0;x<20;x++) {
+			var map_x = [];
+		   	for (var y=0;y<20;y++) {
+		   		var span=document.createElement("span");
+				span.style.top=x*40+"px";
+			   	span.style.left=y*40+"px";
+			   	span.setAttribute("id",x+"-"+y);
+			   	span.setAttribute("x",x);
+			   	span.setAttribute("y",y);
+			   	
+			   	//点击设置墙壁
+			   	span.onclick=function(){
+			   		if(this.getAttribute('is_start')||this.getAttribute('is_end')){
+			   			return;
+			   		}else{
+			   			this.style.background="black";
+			   			map[this.getAttribute('x')][this.getAttribute('y')].is_wall=1;
+			   			map[this.getAttribute('x')][this.getAttribute('y')].is_road=0;
+			   		}
+			   	};
+			   	map_dom.appendChild(span);
+			   	
+			   	var point=new Point();
+			   	point.x=x;
+			   	point.y=y;
+			   	map_x[y]= point;
+			}
+		   	map[x] = map_x;
+		}
+		
+		//设置起始点
+		var start = document.getElementById("8-5");
+		start.style.background="green";
+		start.setAttribute("is_start","1");
+		map[start_x][start_y].is_start=1;
+		map[start_x][start_y].is_road=0;
+		
+		//设置终点
+		var is_end = document.getElementById("8-15");
+		is_end.style.background="yellow";
+		is_end.setAttribute("is_end","1");
+		map[end_x][end_y].is_end=1;
+		map[end_x][end_y].is_road=0;
+		
+	}
+   	
+</script>
